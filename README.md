@@ -15,7 +15,7 @@ This repository replicates the experiments of [Cheap Permutation Testing](https:
 
 ## Installation
 
-Preferred Python version: 3.11.10. All homogeneity experiments were run with Python 3.8.6 on a Slurm cluster of Intel Xeon Platinum 8268 CPU. 
+All homogeneity experiments were run with Python 3.8.6 on a Slurm cluster of Intel Xeon Platinum 8268 CPU. 
 All independence experiments were run with Python 3.13.0 on a single AMD EPYC 7V13 CPU.
 
 Create the conda environment `cheap-env` by running the command
