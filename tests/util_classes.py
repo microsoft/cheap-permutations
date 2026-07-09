@@ -477,7 +477,10 @@ class JointGroupResults:
                     self.threshold_stds[name][bandwidth] = np.std(np.array(self.threshold_values[name][bandwidth]))
                 self.rejection_rates[name] = np.mean(self.rejects[name])
                 self.rejection_rates_median[name] = np.mean(self.rejects_median[name])
-                self.time_means[name] = np.mean(self.times[name])
+                # Guard against non-scalar time entries (e.g. legacy result files);
+                # only scalar per-test runtimes contribute to the mean.
+                scalar_times = [t for t in self.times[name] if np.isscalar(t)]
+                self.time_means[name] = np.mean(scalar_times) if len(scalar_times) else np.nan
                 
     def print_info(self):
         for i in range(len(self.group_names)):

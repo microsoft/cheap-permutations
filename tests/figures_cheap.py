@@ -781,7 +781,121 @@ def fig_n_two_sample(args, test_groups, joint_group_results_dict, plot_time=True
         plt.xlim([1536,40960])
 
     plt.legend(handletextpad=0.0, loc='upper left')
-    
+
+def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False):
+    """Power (vs sample size) figure for aggregated two-sample tests.
+
+    Plots, as a function of the sample size n, the power of:
+      - the aggregated complete test,
+      - the aggregated cheap test for each bin count s in args.cheap_perm_list, and
+      - the median-heuristic single-bandwidth version of each of the above.
+
+    Aggregated tests are drawn with solid lines; the corresponding median
+    heuristics use dashed lines of the same color.
+    """
+    std_multiple = scipy.stats.norm.ppf((1+args.wilson_size)/2)
+
+    # Sample sizes on the x axis (each group has n samples from P and n from Q)
+    array_n_samples = np.array(args.n_samples_list)
+    x_values = 2*array_n_samples
+
+    #Linestyles, markers, marker sizes and colors
+    ls_agg = '-'
+    ls_median = '--'
+    mss = ['>', 's', 'o', 'D', '^', '*', 'x', '<', 'v', 'p']*2
+    ms_size = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]*2
+    colors = ['#e41a1c', 'cyan', '#0000cd', '#4daf4a', 'magenta', 'gray', 'orange', 'yellow', 'black']*2
+
+    # Build the list of curves: aggregated complete plus one aggregated cheap
+    # curve per bin count s
+    curves = []
+    if not no_compute['complete']:
+        curves.append({'group': 'complete', 'id': 0, 'legend': 'Agg. complete'})
+    if not no_compute['cheap_perm']:
+        for j, s in enumerate(args.cheap_perm_list):
+            curves.append({'group': 'cheap_perm', 'id': j, 'legend': f'Agg. cheap $s={s}$'})
+
+    def collect(group, id_value, median_rate):
+        rr_list = []
+        rru_list = []
+        rrl_list = []
+        for n_samples in args.n_samples_list:
+            key = str(n_samples)+'_'+group
+            rr, rru, rrl, ts, lb = joint_group_results_dict[key].get_lists(
+                wilson_intervals=args.wilson_intervals, z=std_multiple, median_rate=median_rate)
+            rr_list.append(rr[id_value])
+            rru_list.append(rru[id_value])
+            rrl_list.append(rrl[id_value])
+        return np.array(rr_list), np.array(rru_list), np.array(rrl_list)
+
+    plt.clf()
+    #Plot settings
+    fix_plot_settings = True
+    if fix_plot_settings:
+        plt.rc('font', family='serif')
+        plt.rc('text', usetex=False)
+        label_size = 9
+        legend_size = 8
+        mpl.rcParams['xtick.labelsize'] = 6
+        mpl.rcParams['ytick.labelsize'] = label_size
+        mpl.rcParams['axes.labelsize'] = label_size
+        mpl.rcParams['axes.titlesize'] = label_size
+        mpl.rcParams['figure.titlesize'] = label_size
+        mpl.rcParams['lines.markersize'] = label_size
+        mpl.rcParams['grid.linewidth'] = 1.5
+        mpl.rcParams['legend.fontsize'] = legend_size
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
+        pylab.rcParams['xtick.major.pad'] = 5
+        pylab.rcParams['ytick.major.pad'] = 5
+
+    #Title settings
+    if not args.no_title:
+        if args.name == 'Higgs':
+            plt.title(r'Higgs ($p_{p}=$'+f'${args.p_poisoning}$'+f', $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
+        else:
+            plt.title(f'{args.name} (aggregated, $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
+
+    empty_labels = [''] * len(args.n_samples_list)
+
+    #Plot one aggregated curve (solid) and its median heuristic (dashed) per test
+    for line_number, curve in enumerate(curves):
+        group = curve['group']
+        id_value = curve['id']
+        color = colors[line_number]
+        marker = mss[line_number]
+        markersize = ms_size[line_number]
+
+        # Aggregated test (solid line)
+        rr, rru, rrl = collect(group, id_value, median_rate=False)
+        plot_line(rr, rru, rrl, x_values, empty_labels, legend_text=curve['legend'],
+                  marker=marker, markersize=markersize, color=color, linestyle=ls_agg,
+                  xytext=(0, 0), log_time_scale=False, small_times=args.small_times)
+
+        # Median heuristic single-bandwidth test (dashed line, same color)
+        rr_m, rru_m, rrl_m = collect(group, id_value, median_rate=True)
+        plot_line(rr_m, rru_m, rrl_m, x_values, empty_labels,
+                  legend_text=curve['legend'].replace('Agg.', 'Median'),
+                  marker=marker, markersize=markersize, color=color, linestyle=ls_median,
+                  xytext=(0, 0), log_time_scale=False, small_times=args.small_times)
+
+    #Plot nominal level
+    if not args.no_nominal_level:
+        plt.axhline(y=args.alpha, color='black', linestyle=':', linewidth=1, label=r'Level $\alpha$')
+
+    #Axis settings
+    plt.xscale('log')
+    plt.tick_params(axis='x', which='minor', labelbottom=False)
+    tick_positions = [2048, 4096, 8192, 16384, 32768]
+    tick_labels = [2048, 4096, 8192, 16384, 32768]
+    plt.xticks(tick_positions, tick_labels)
+    plt.xlabel('Sample size $n$')
+    plt.ylabel('Power')
+    plt.xlim([1.8*np.min(array_n_samples), 2.2*np.max(array_n_samples)])
+    plt.ylim([-0.02, 1.02])
+
+    plt.legend(handletextpad=0.0, loc='upper left', ncol=2)
+
 def fig_n_independence(args, test_groups, joint_group_results_dict, plot_time=True):
     rejection_rate = dict()
     rejection_rate_upper = dict()
@@ -1473,6 +1587,11 @@ if __name__ == '__main__':
     parser.add_argument('--no_title', action='store_true', help='if passed, do not show title on plot')
     parser.add_argument('--n_lists', action='store_true', help='use s_lists for n_samples plots')
 
+    #Arguments for aggregated tests
+    parser.add_argument('--n_bandwidths', type=int, default=1, help='number of bandwidths used in the aggregated test')
+    parser.add_argument('--B_2', type=int, default=200, help='number of permutations used for Monte Carlo estimation in agg.')
+    parser.add_argument('--B_3', type=int, default=20, help='number of bisection iterations for aggregated test')
+
     #Argument for gaussians
     parser.add_argument('--mean_diff', type=float, default=0.024, help='covariance eigenvalue (for blobs)')
     
@@ -1505,13 +1624,33 @@ if __name__ == '__main__':
     
     parser.add_argument('--plot_n_permutations', action='store_true', help='if passed show n_permutations in x axis')
     parser.add_argument('--plot_n_samples', action='store_true', help='if passed show n_samples lines')
+    parser.add_argument('--plot_n_samples_aggregated', action='store_true', help='if passed show aggregated-test power vs n_samples')
     parser.add_argument('--plot_n_samples_vs_power', action='store_true', help='if passed show n_samples in x axis')
     parser.add_argument('--plot_wilcoxon', action='store_true', help='if passed show Wilcoxon plot')
     parser.add_argument('--no_point_label_cheap', action='store_true', help='if passed show no point labels for cheap permutations lines')
     
     args = parser.parse_args()
     
-    if args.plot_wilcoxon:
+    if args.plot_n_samples_aggregated:
+        #Reset default values depending on args.name
+        if args.name == 'Higgs':
+            args.d = args.n_components
+            if args.p_poisoning > 0:
+                args.mixing = True
+
+        args.interactive = False
+
+        util_tests_cheap.get_attributes_aggregated(args)
+
+        #Build list of test groups
+        test_groups = ['complete', 'cheap_perm']
+
+        #Store no-compute choices for each test group
+        no_compute = dict()
+        no_compute['complete'] = args.no_complete
+        no_compute['cheap_perm'] = args.no_cheap_perm
+
+    elif args.plot_wilcoxon:
         args.interactive = False
 
         util_tests_cheap.get_attributes_two_sample_tests(args)
@@ -1584,7 +1723,63 @@ if __name__ == '__main__':
         used_test_groups.append('long_times'+'_'+str_long_times)
     formatted_used_test_groups = util_classes.format_int_list(used_test_groups)
     
-    if args.plot_n_permutations:
+    if args.plot_n_samples_aggregated:
+        joint_group_results_dict = dict()
+        available_n_samples = []
+        print(f'args.n_samples_list: {args.n_samples_list}')
+        for n_samples in args.n_samples_list:
+            args.n = n_samples
+            args.complete_list = [args.n]
+            print(f'Number of samples: {args.n}')
+
+            joint_resdir = util_classes.get_joint_group_directories(args, test_groups, aggregated=True)
+
+            joint_filename = util_classes_cheap.get_joint_filename(args, test_groups, aggregated=True)
+
+            joint_fname = util_classes.get_fname_joint(args, test_groups, joint_resdir, joint_filename)
+
+            missing = False
+            for group in test_groups:
+                if not no_compute[group] and not os.path.exists(joint_fname[group]):
+                    print(f'Skipping n={n_samples}: missing {joint_fname[group]}')
+                    missing = True
+                    break
+            if missing:
+                continue
+
+            for group in test_groups:
+                if not no_compute[group]:
+                    print(f'joint_fname[group]: {joint_fname[group]}')
+                    joint_group_results_dict[str(n_samples)+'_'+group] = pickle.load(open(joint_fname[group], 'rb'))
+            available_n_samples.append(n_samples)
+
+        #Restrict the plotted sample sizes to those with available results
+        args.n_samples_list = available_n_samples
+
+        if not os.path.exists('figures_cheap_n_aggregated'+'_'+args.name):
+            os.makedirs('figures_cheap_n_aggregated'+'_'+args.name)
+
+        plt.figure(figsize=(4.0,4.0))
+
+        fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False)
+
+        if args.name == 'Higgs':
+            if args.mixing:
+                fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+str(args.mixing)+'_'+str(args.p_poisoning)+'_'+formatted_used_test_groups+'.pdf'
+            else:
+                fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+str(args.mixing)+'_'+str(args.null)+'_'+formatted_used_test_groups+'.pdf'
+        else:
+            fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+formatted_used_test_groups+'.pdf'
+
+        #Here new
+        pplot()
+        plt.tight_layout()
+        #End of new
+
+        print('Figure file:'+'figures_cheap_n_aggregated'+'_'+args.name+'/'+fig_file)
+        plt.savefig(f'figures_cheap_n_aggregated'+'_'+args.name+'/'+fig_file, bbox_inches='tight', pad_inches=0)
+
+    elif args.plot_n_permutations:
         joint_group_results_dict = dict()
         for n_perm in args.n_permutations_list:
             args.B = n_perm

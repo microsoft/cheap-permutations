@@ -8,14 +8,14 @@ import util_classes_cheap
 import util_tests_cheap
 
 
-def get_results(args):
-    resdir = util_classes_cheap.get_group_directories(args, test_groups)
+def get_results(args, aggregated=False):
+    resdir = util_classes_cheap.get_group_directories(args, test_groups, aggregated=aggregated)
             
-    groupname, testname = util_classes_cheap.get_test_file_names(args, test_groups, resdir, save=False)
+    groupname, testname = util_classes_cheap.get_test_file_names(args, test_groups, resdir, save=False, aggregated=aggregated)
     
-    joint_resdir = util_classes.get_joint_group_directories(args, test_groups)
+    joint_resdir = util_classes.get_joint_group_directories(args, test_groups, aggregated=aggregated)
     
-    joint_filename = util_classes_cheap.get_joint_filename(args, test_groups)
+    joint_filename = util_classes_cheap.get_joint_filename(args, test_groups, aggregated=aggregated)
     
     joint_fname = util_classes.get_fname_joint(args, test_groups, joint_resdir, joint_filename)
     
@@ -40,7 +40,7 @@ def get_results(args):
             #print(f'{args.n_tests}x{len(fnames[group])} = {total_n_tests_found} tests found. {args.total_n_tests} needed.')
             print(f'{total_n_tests_found} tests found. {args.total_n_tests} needed.')
 
-            joint_group_results_dict[group] = util_classes.JointGroupResults(joint_fname[group], args.total_n_tests, args.B, 1, file_exists[group])
+            joint_group_results_dict[group] = util_classes.JointGroupResults(joint_fname[group], args.total_n_tests, args.B, args.n_bandwidths, file_exists[group])
 
             joint_group_results_dict[group].set_compute(no_compute[group])
 
@@ -88,6 +88,11 @@ if __name__ == '__main__':
     parser.add_argument('--test_type', type=str, default='two_sample', help='experiment name')
     parser.add_argument('--n_lists', action='store_true', help='use s_lists for n_samples plots')
 
+    #Arguments for aggregated tests
+    parser.add_argument('--n_bandwidths', type=int, default=1, help='number of bandwidths used in the aggregated test')
+    parser.add_argument('--B_2', type=int, default=200, help='number of permutations used for Monte Carlo estimation in agg.')
+    parser.add_argument('--B_3', type=int, default=20, help='number of bisection iterations for aggregated test')
+
     #Argument for gaussians
     parser.add_argument('--mean_diff', type=float, default=0.024, help='mean difference (for gaussians)')
     
@@ -120,7 +125,33 @@ if __name__ == '__main__':
     parser.add_argument('--no_ind_cross', action='store_true', help='if passed do not compute cross HSIC tests')
     args = parser.parse_args()
     
-    if args.test_type == 'two_sample':
+    if args.test_type == 'two_sample' and args.n_bandwidths > 1:
+        #Aggregated two-sample testing
+        if args.name == 'blobs':
+            args.d = 2
+
+        if args.name == 'Higgs':
+            args.d = args.n_components
+            if args.p_poisoning > 0:
+                args.mixing = True
+
+        if args.name == 'sine':
+            args.d = 10
+
+        args.interactive = False
+
+        util_tests_cheap.get_attributes_aggregated(args)
+
+        #Store no-compute choices for each test group
+        no_compute = dict()
+        no_compute['complete'] = args.no_complete
+        no_compute['cheap_perm'] = args.no_cheap_perm
+
+        #Build list of test groups
+        test_groups = ['complete', 'cheap_perm']
+        args.estimator_list = test_groups
+
+    elif args.test_type == 'two_sample':
         #Reset default values depending on args.name
 #         if args.name == 'gaussians':
 #             args.d = 10
@@ -171,5 +202,5 @@ if __name__ == '__main__':
         test_groups = ['ind_complete_WB', 'ind_cheap_perm_WB', 'ind_cross']
         args.estimator_list = test_groups
         
-    get_results(args)
+    get_results(args, aggregated=(args.test_type == 'two_sample' and args.n_bandwidths > 1))
     

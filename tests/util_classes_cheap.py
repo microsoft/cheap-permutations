@@ -163,7 +163,31 @@ def get_joint_filename(args, test_groups, aggregated=False):
     
     joint_filename = dict() 
     
-    if args.test_type == 'two_sample':
+    if args.n_bandwidths > 1:
+        # Aggregated two-sample testing
+        formatted_complete_list = format_int_list(args.complete_list)
+        formatted_cheap_perm_list = format_int_list(args.cheap_perm_list_n) if args.n_lists else format_int_list(args.cheap_perm_list)
+
+        if args.name == 'gaussians':
+            name_arguments = str(args.mean_diff)
+        elif args.name == 'blobs':
+            name_arguments = str(args.grid_size)+'_'+str(args.epsilon)
+        elif args.name == 'MNIST' or args.name == 'EMNIST': 
+            name_arguments = str(args.p_even)
+        elif args.name == 'Higgs': 
+            if args.mixing:
+                name_arguments = str(args.mixing)+'_'+str(args.p_poisoning)
+            else:
+                name_arguments = str(args.mixing)+'_'+str(args.null)
+        elif args.name == 'sine':
+            name_arguments = str(args.omega)
+        else:
+            name_arguments = 'None'
+
+        group_arguments = dict()
+        group_arguments['complete'] = formatted_complete_list
+        group_arguments['cheap_perm'] = formatted_cheap_perm_list
+    elif args.test_type == 'two_sample':
     
         formatted_complete_list = format_int_list(args.complete_list)
         formatted_cheap_perm_list = format_int_list(args.cheap_perm_list_n) if args.n_lists else format_int_list(args.cheap_perm_list)
