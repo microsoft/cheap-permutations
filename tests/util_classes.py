@@ -147,6 +147,7 @@ class AggregatedTestResults:
         #...-1 because indices go from 0 to B instead of 1 to B+1
         
     def set_reject(self):
+        # Note: reject_with_threshold argument has no effect
         quantile = np.ceil((self.B+1)*(1-self.hat_u_alpha*self.weights_vec)).astype(int)
         print(f'self.hat_u_alpha: {self.hat_u_alpha}, self.weights_vec: {self.weights_vec}, quantile: {quantile}, B+1: {self.B + 1}.')
         self.rejects = 0
@@ -196,7 +197,6 @@ class AggregatedTestResults:
         else:
             self.rejects_median = 0
             
-
 class GroupResults:
     
     def __init__(self, n_tests, B, fname_group, file_exists_group, n_bandwidths, bw, B_2 = 0, weights_vec = None):
@@ -267,8 +267,11 @@ class GroupResults:
             self.group_tests[name].set_threshold(alpha)
             
     def set_reject(self, alpha, reject_with_threshold=False):
+        # Note: alpha and reject_with_threshold arguments have no effect for aggregated
+        # testing with multiple bandwidths
         for name in self.group_names:
-            self.group_tests[name].set_reject(alpha, reject_with_threshold=reject_with_threshold)
+            (self.group_tests[name].set_reject(alpha, reject_with_threshold=reject_with_threshold)
+             if self.n_bandwidths == 1 else self.group_tests[name].set_reject())
             
     def set_reject_median(self):
         for name in self.group_names:

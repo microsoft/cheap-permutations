@@ -18,9 +18,10 @@ This repository replicates the experiments of [Cheap Permutation Testing](https:
 All homogeneity experiments were run with Python 3.8.6 on a Slurm cluster of Intel Xeon Platinum 8268 CPU. 
 All independence experiments were run with Python 3.13.0 on a single AMD EPYC 7V13 CPU.
 
-Create the conda environment `cheap-env` by running the command
+Create and activate the conda environment `cheap-env` by running the commands
 ```
 conda env create -f cheap-env.yml
+conda activate cheap-env
 ```
 To install the local package `cheaper`, run the following command from the folder that contains this README file:
 ```

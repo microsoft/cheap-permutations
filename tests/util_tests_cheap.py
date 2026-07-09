@@ -1,4 +1,36 @@
-import numpy as np
+def get_attributes_aggregated(args):
+    #Build list of test groups
+    test_groups = ['complete', 'cheap_perm']
+    
+    #Define dicts to store estimator, estimator names (used when printing results), and estimator labels (used in plots)
+    args.estimators = dict()
+    args.estimator_names = dict()
+    args.estimator_labels = dict()
+    for group in test_groups:
+        args.estimators[group] = []
+        args.estimator_names[group] = []
+        args.estimator_labels[group] = []
+        
+    #Build list of estimators for complete tests
+    args.complete_list = [args.n] 
+    for n in args.complete_list:
+        args.estimators['complete'].append(str(n))
+        args.estimator_names['complete'].append('complete '+str(n))
+        args.estimator_labels['complete'].append('n='+str(n))
+        
+    #Build list of estimators for cheap permutation tests
+    args.cheap_perm_list = [4,8,32,128,512]
+    args.cheap_perm_list_n = [4,8,32,128,512]
+    for s in args.cheap_perm_list:
+        args.estimators['cheap_perm'].append(str(s))
+        args.estimator_names['cheap_perm'].append('cheap perm. '+str(s))
+        args.estimator_labels['cheap_perm'].append('s='+str(s))
+            
+    #List of number of permutations
+    args.n_permutations_list = [19,39,79,159,319,639,1279,2559]
+    
+    #List of number of samples
+    args.n_samples_list = [1024,2048,3072,4096,6144,8192,12288,16384]
 
 def get_attributes_two_sample_tests(args):
     #Build list of test groups

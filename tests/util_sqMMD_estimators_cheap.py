@@ -75,7 +75,7 @@ def cheap_perm(X1,X2,B,s,lam,group_results_dict,kernel="gauss",null_seed=None,sa
       statistic_seed: seed used to initialize random number generator for
         randomness in computing test statistic; can be any valid input to 
         numpy.random.default_rng
-    
+      save_complete: run complete (i.e., not cheap) permutation test?
     """
     # Measure runtime
     time_0 = time.time()
@@ -140,7 +140,102 @@ def cheap_perm(X1,X2,B,s,lam,group_results_dict,kernel="gauss",null_seed=None,sa
     else:
         group_results_dict['cheap_perm'].group_tests[str(s)].estimator_values[:] = estimator_values
         group_results_dict['cheap_perm'].group_tests[str(s)].total_times = total_time
+
+def cheap_perm_aggregated(X1,X2,group_results_dict,B=299,B_2=200,s=16,lam=np.array([1.]),kernel="gauss",null_seed=None,
+        save_complete=False):
+    """Aggregated cheap permutation two-sample test with sample sequences 
+    X1 and X2 and auxiliary kernel k' = target kernel k.
     
+    Note: Assumes that bin_size = max(1, (n1+n2)//(2s)) evenly divides n1 and n2
+    
+    Args:
+      X1: 2D array of size (n1,d)
+      X2: 2D array of size (n2,d)
+      group_results_dict: object used to store results
+      B: number of permutations (int)
+      lam: vector of positive real-valued kernel bandwidths 
+      s: total number of compression bins will be num_bins = min(2*s, n1+n2);
+        X1 will be divided into num_bins * n1 / (n1 + n2) compression bins;
+        X2 will be divided into num_bins * n2 / (n1 + n2) compression bins
+      kernel: kernel name; valid options include "gauss" for Gaussian kernel
+        exp(-||x-y||^2/lam^2)
+      null_seed: seed used to initialize random number generator for
+        randomness in simulating null; can be any valid input to 
+        numpy.random.default_rng
+      statistic_seed: seed used to initialize random number generator for
+        randomness in computing test statistic; can be any valid input to 
+        numpy.random.default_rng
+      save_complete: run complete (i.e., not cheap) permutation test?
+    """
+    # Measure runtime
+    time_0 = time.time()
+    
+    if kernel != "gauss":
+        raise ValueError(f"Unsupported kernel name {kernel}")
+        
+    L = len(lam)
+    
+    # Number of sample poins
+    n1 = X1.shape[0]
+    n2 = X2.shape[0]
+    
+    # Number of KT-Compress bins per dataset
+    num_bins_total = min(2*s, n1+n2)
+    bin_size = (n1+n2) // num_bins_total
+    num_bins1 = n1 // bin_size
+    num_bins2 = num_bins_total - num_bins1
+                        
+    # Initialize matrix for storing sum of Gaussian kernel evaluations
+    # between each pair of coresets for each bandwidth
+    avg_matrix = np.zeros((num_bins_total,num_bins_total,L))
+
+    # For each bandwidth, compute sum of Gaussian kernel evaluations
+    # between each pair of coresets
+    gaussianc.sum_gaussian_kernel_by_bin_aggregated(
+        X1, X2, lam**2, avg_matrix)
+
+    # Normalize avg_matrix by the number of kernel evaluations
+    avg_matrix /= (bin_size**2) 
+
+    # Initialize generator for generating permutations
+    test_rng = np.random.default_rng(null_seed)
+
+    # Compute signed sums of avg_matrix for each permutation
+    signed_sums = np.zeros((B+B_2+1,len(lam)))
+    for b in range(B+B_2+1):
+        # First select permuted order
+        if b == B+B_2:
+            # Store original order in final permutation bin
+            perm_signs = np.arange(num_bins_total, dtype=int)
+        else:
+            # Generate random permutation of num_bins_total indices
+            perm_signs = test_rng.permutation(num_bins_total)
+        # Then assign a +/-1 sign to each datapoint indicating if
+        # bin was assigned a permutation index < num_bins1
+        perm_signs = (perm_signs < num_bins1)*2-1
+
+        # Next compute the signed tensor sum 
+        # sum_{i,j} sign(i) sign(j) avg_matrix[i,j,:] 
+        cttc.signed_tensor_sum(avg_matrix, perm_signs, signed_sums[b,:])
+
+    # Store permuted squared MMD values by normalizing tensor sums
+    all_estimator_values = dict()
+    for k, bw in enumerate(lam):
+        all_estimator_values[bw] = (
+             signed_sums[:,k] / (num_bins1*num_bins2))
+        
+    # Measure runtime
+    time_1 = time.time()
+    total_time = time_1 - time_0
+        
+    # Store results
+    if save_complete:
+        group_results_dict['complete'].group_tests[str(s)].all_estimator_values = all_estimator_values
+        group_results_dict['complete'].group_tests[str(s)].total_times = total_time
+    else:
+        group_results_dict['cheap_perm'].group_tests[str(s)].all_estimator_values = all_estimator_values
+        group_results_dict['cheap_perm'].group_tests[str(s)].total_times = total_time
+
 def cross_mmd(X1,X2,lam,alpha,group_results_dict,kernel="gauss"):
     
     # Measure runtime
@@ -399,14 +494,6 @@ def wilcoxon(X1,X2,B,s,group_results_dict,null_seed=None):
         else:
             # Generate random permutation of num_bins_total indices
             permutation = test_rng.permutation(num_bins_total)
-#         # Then assign a +/-1 sign to each datapoint indicating if
-#         # bin was assigned a permutation index < num_bins1
-#         perm_signs = (perm_signs < num_bins1)*2-1
-
-#         # Finally compute the unnormalized squared MMD as a signed matrix sum
-#         # sum_{i,j} sign(i) sign(j) avg_matrix[i,j] 
-#         estimator_values[b] = (
-#             signed_matrix_sum(avg_matrix, perm_signs) )
         estimator_values[b] = (
             permutation_matrix_sum(avg_matrix, permutation) )
 

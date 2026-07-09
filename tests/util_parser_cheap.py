@@ -16,7 +16,9 @@ def get_args_test():
     parser.add_argument('--interactive', action='store_true', help='interactive, i.e. do not save results')
     parser.add_argument('--task_id', type=int, default=None, help='task id for sweep jobs')
     parser.add_argument('--number_of_jobs', type=int, default=1000, help='number of sweep jobs')
-    parser.add_argument('--test_type', type=str, default='two_sample', help='experiment name')
+    parser.add_argument('--test_type', '-t', type=str, default='two_sample', 
+                        choices=['two_sample', 'independence'], 
+                        help='type of test to run')
     parser.add_argument('--n_lists', action='store_true', help='use s_lists for n_samples plots')
     parser.add_argument('--save_objects', action='store_true', help='save objects for each test')
     
@@ -38,6 +40,11 @@ def get_args_test():
     
     #Argument for gaussians_cov
     parser.add_argument('--cross_covariance', type=float, default=0.1, help='cross covariance')
+
+    #Arguments for aggregated tests
+    parser.add_argument('--n_bandwidths', type=int, default=1, help='number of bandwidths used in the aggregated test')
+    parser.add_argument('--B_2', type=int, default=200, help='number of permutations used for Monte Carlo estimation in agg.')
+    parser.add_argument('--B_3', type=int, default=20, help='number of bisection iterations for aggregated test')
 
     #Arguments to avoid computing specific test groups, overriding default behavior 
     #(which is computing test groups for which no result files exist)

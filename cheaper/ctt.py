@@ -211,7 +211,7 @@ class TestResults:
             num_greater = (self.estimator_values[thresh_index+1:] > 
                            self.threshold_values).sum()
             # Count the number of values < threshold
-            num_less = (self.estimator_values[:thresh_index-1] < 
+            num_less = (self.estimator_values[:thresh_index] < 
                          self.threshold_values).sum()
             # Reject a particular fraction of the time to ensure test has level alpha
             self.rejects = (B_plus_1*alpha - num_greater)/(
