@@ -96,6 +96,7 @@ class AggregatedTestResults:
         self.bw = bw
         self.weights_vec = weights_vec
         self.hat_u_alpha = None
+        self.alpha = None
         self.all_estimator_values = dict()
         self.estimator_values = dict()
         self.estimator_values_2 = dict()
@@ -140,6 +141,7 @@ class AggregatedTestResults:
             self.estimator_values[bandwidth][:] = np.sort(self.estimator_values[bandwidth][:])
         
     def set_threshold(self, alpha):
+        self.alpha = alpha
         for bandwidth in self.bw:
             threshold_position = np.ceil((1-alpha)*(self.B+1)).astype('int')
             print(f'threshold_position: {threshold_position}')
@@ -192,9 +194,28 @@ class AggregatedTestResults:
         pickle.dump(self, open(self.fname, 'wb'))
         
     def set_reject_median(self):
-        if self.statistic_values[self.bw[self.n_bandwidths-1]] > self.threshold_values[self.bw[self.n_bandwidths-1]]:
+        # Reject the median heuristic bandwidth single test, using randomized
+        # tie-breaking so that the test has exact level alpha.
+        # Note: assumes the last bandwidth in self.bw is the median heuristic one.
+        last_bw = self.bw[self.n_bandwidths-1]
+        stat_val = self.statistic_values[last_bw]
+        thresh_val = self.threshold_values[last_bw]
+        if stat_val > thresh_val:
+            # Always reject
             self.rejects_median = 1
+        elif stat_val == thresh_val:
+            est_vals = self.estimator_values[last_bw]
+            B_plus_1 = est_vals.shape[0]
+            thresh_index = np.ceil((1-self.alpha)*B_plus_1).astype('int')-1
+            # Count the number of values > threshold
+            num_greater = (est_vals[thresh_index+1:] > thresh_val).sum()
+            # Count the number of values < threshold
+            num_less = (est_vals[:thresh_index] < thresh_val).sum()
+            # Reject a particular fraction of the time to ensure test has level alpha
+            self.rejects_median = (B_plus_1*self.alpha - num_greater)/(
+                B_plus_1 - num_greater - num_less)
         else:
+            # Never reject
             self.rejects_median = 0
             
 class GroupResults:

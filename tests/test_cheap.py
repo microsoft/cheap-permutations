@@ -124,8 +124,6 @@ def complete_test_aggregated(X1,X2,B,alpha,lam,seed,group_results_dict,args):
         group_results_dict['complete'].compute_hat_u_alpha(args.B_3, alpha)
         # Get reject
         group_results_dict['complete'].set_reject(alpha)
-        # Obtain computation time means
-        group_results_dict['complete'].set_total_times(sum_across_bw=False)
         # Get threshold for median bandwidth single test
         group_results_dict['complete'].set_threshold(alpha)
         # Get reject for median bandwidth single test
@@ -184,8 +182,6 @@ def cheap_perm_test_aggregated(X1,X2,B,alpha,lam,seed,group_results_dict,args):
         group_results_dict['cheap_perm'].compute_hat_u_alpha(args.B_3, alpha)
         # Get reject
         group_results_dict['cheap_perm'].set_reject(alpha)
-        # Obtain computation time means
-        group_results_dict['cheap_perm'].set_total_times(sum_across_bw=False)
         # Get threshold for median bandwidth single test
         group_results_dict['cheap_perm'].set_threshold(alpha)
         # Get reject for median bandwidth single test
