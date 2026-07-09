@@ -132,6 +132,7 @@ def complete_test_aggregated(X1,X2,B,alpha,lam,seed,group_results_dict,args):
         group_results_dict['complete'].set_reject_median()
         # Save group results
         group_results_dict['complete'].set_group_results()
+        group_results_dict['complete'].save_results(args)
         # In principle, no need to save the TestResults objects; uncomment the next line if needed
         if args.save_objects:
             group_results_dict['complete'].save_objects(args)
@@ -191,6 +192,7 @@ def cheap_perm_test_aggregated(X1,X2,B,alpha,lam,seed,group_results_dict,args):
         group_results_dict['cheap_perm'].set_reject_median()
         # Save group results
         group_results_dict['cheap_perm'].set_group_results()
+        group_results_dict['cheap_perm'].save_results(args)
         # In principle, no need to save the TestResults objects; uncomment the next line if needed
         if args.save_objects:
             group_results_dict['cheap_perm'].save_objects(args)
