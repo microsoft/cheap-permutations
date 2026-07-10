@@ -118,7 +118,7 @@ def fig_rejection_two_sample(args, test_groups, joint_group_results_dict):
         if args.name == 'gaussians': 
             plt.title(f'Gaussian (mean separation$=${args.mean_diff}, $n_1,n_2={args.n}$, $B={args.B}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'Higgs': 
@@ -277,7 +277,7 @@ def fig_rejection_independence(args, test_groups, joint_group_results_dict):
         if args.name == 'gaussians_cov': 
             plt.title(f'Gaussian independence (cross covariance$=${args.cross_covariance}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'Higgs': 
@@ -396,7 +396,7 @@ def fig_B_two_sample(args, test_groups, joint_group_results_dict):
         if args.name == 'gaussians': 
             plt.title(f'Gaussian (mean separation$=${args.mean_diff}, $n={args.n}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $n={args.n}$)')
         elif args.name == 'Higgs': 
@@ -493,7 +493,7 @@ def fig_B_independence(args, test_groups, joint_group_results_dict):
         if args.name == 'gaussians_cov': 
             plt.title(f'Gaussian (cross covariance$=${args.cross_covariance}, $n={args.n}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $n={args.n}$)')
         elif args.name == 'Higgs': 
@@ -610,7 +610,7 @@ def fig_n_two_sample(args, test_groups, joint_group_results_dict, plot_time=True
         if args.name == 'gaussians': 
             plt.title(f'Gaussian (mean separation$=${args.mean_diff}, $B={args.B}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $B={args.B}$)')
         elif args.name == 'Higgs': 
@@ -783,21 +783,23 @@ def fig_n_two_sample(args, test_groups, joint_group_results_dict, plot_time=True
     plt.legend(handletextpad=0.0, loc='upper left')
 
 def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False):
-    """Power (vs sample size) figure for aggregated two-sample tests.
+    """Power figure for aggregated two-sample tests.
 
-    Plots, as a function of the sample size n, the power of:
+    Plots the power of:
       - the aggregated complete test,
       - the aggregated cheap test for each bin count s in args.cheap_perm_list, and
-      - the median-heuristic single-bandwidth version of each of the above.
+      - the median-heuristic single-bandwidth version of each of the above,
+    against either the sample size n (``plot_time=False``) or the total
+    computation time in seconds (``plot_time=True``).
 
     Aggregated tests are drawn with solid lines; the corresponding median
     heuristics use dashed lines of the same color.
     """
     std_multiple = scipy.stats.norm.ppf((1+args.wilson_size)/2)
 
-    # Sample sizes on the x axis (each group has n samples from P and n from Q)
+    # Sample sizes (each group has n samples from P and n from Q)
     array_n_samples = np.array(args.n_samples_list)
-    x_values = 2*array_n_samples
+    x_samples = 2*array_n_samples
 
     #Linestyles, markers, marker sizes and colors
     ls_agg = '-'
@@ -819,6 +821,7 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
         rr_list = []
         rru_list = []
         rrl_list = []
+        ts_list = []
         for n_samples in args.n_samples_list:
             key = str(n_samples)+'_'+group
             rr, rru, rrl, ts, lb = joint_group_results_dict[key].get_lists(
@@ -826,7 +829,8 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
             rr_list.append(rr[id_value])
             rru_list.append(rru[id_value])
             rrl_list.append(rrl[id_value])
-        return np.array(rr_list), np.array(rru_list), np.array(rrl_list)
+            ts_list.append(ts[id_value])
+        return np.array(rr_list), np.array(rru_list), np.array(rrl_list), np.array(ts_list)
 
     plt.clf()
     #Plot settings
@@ -836,7 +840,10 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
         plt.rc('text', usetex=False)
         label_size = 9
         legend_size = 8
-        mpl.rcParams['xtick.labelsize'] = 6
+        if plot_time:
+            mpl.rcParams['xtick.labelsize'] = label_size
+        else:
+            mpl.rcParams['xtick.labelsize'] = 6
         mpl.rcParams['ytick.labelsize'] = label_size
         mpl.rcParams['axes.labelsize'] = label_size
         mpl.rcParams['axes.titlesize'] = label_size
@@ -858,6 +865,8 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
 
     empty_labels = [''] * len(args.n_samples_list)
 
+    all_times = []
+
     #Plot one aggregated curve (solid) and its median heuristic (dashed) per test
     for line_number, curve in enumerate(curves):
         group = curve['group']
@@ -867,17 +876,21 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
         markersize = ms_size[line_number]
 
         # Aggregated test (solid line)
-        rr, rru, rrl = collect(group, id_value, median_rate=False)
+        rr, rru, rrl, ts = collect(group, id_value, median_rate=False)
+        x_values = ts if plot_time else x_samples
+        all_times.append(ts)
         plot_line(rr, rru, rrl, x_values, empty_labels, legend_text=curve['legend'],
                   marker=marker, markersize=markersize, color=color, linestyle=ls_agg,
-                  xytext=(0, 0), log_time_scale=False, small_times=args.small_times)
+                  xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
 
-        # Median heuristic single-bandwidth test (dashed line, same color)
-        rr_m, rru_m, rrl_m = collect(group, id_value, median_rate=True)
-        plot_line(rr_m, rru_m, rrl_m, x_values, empty_labels,
+        # Median heuristic single-bandwidth test (dashed line, same color).
+        # It reuses the aggregated computation, hence the same computation time.
+        rr_m, rru_m, rrl_m, ts_m = collect(group, id_value, median_rate=True)
+        x_values_m = ts_m if plot_time else x_samples
+        plot_line(rr_m, rru_m, rrl_m, x_values_m, empty_labels,
                   legend_text=curve['legend'].replace('Agg.', 'Median'),
                   marker=marker, markersize=markersize, color=color, linestyle=ls_median,
-                  xytext=(0, 0), log_time_scale=False, small_times=args.small_times)
+                  xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
 
     #Plot nominal level
     if not args.no_nominal_level:
@@ -886,15 +899,97 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
     #Axis settings
     plt.xscale('log')
     plt.tick_params(axis='x', which='minor', labelbottom=False)
-    tick_positions = [2048, 4096, 8192, 16384, 32768]
-    tick_labels = [2048, 4096, 8192, 16384, 32768]
-    plt.xticks(tick_positions, tick_labels)
-    plt.xlabel('Sample size $n$')
+    if plot_time:
+        tick_positions = [0.1, 1, 10, 100, 1000]
+        plt.xticks(tick_positions, tick_positions)
+        plt.xlabel('Total computation time (s)')
+        all_times = np.concatenate(all_times)
+        plt.xlim([0.5*np.min(all_times), 2.0*np.max(all_times)])
+    else:
+        tick_positions = [2048, 4096, 8192, 16384, 32768]
+        plt.xticks(tick_positions, tick_positions)
+        plt.xlabel('Sample size $n$')
+        plt.xlim([1.8*np.min(array_n_samples), 2.2*np.max(array_n_samples)])
     plt.ylabel('Power')
-    plt.xlim([1.8*np.min(array_n_samples), 2.2*np.max(array_n_samples)])
     plt.ylim([-0.02, 1.02])
 
     plt.legend(handletextpad=0.0, loc='upper left', ncol=2)
+
+def fig_s_two_sample_aggregated(args, test_groups, joint_group_results_dict, n_fixed):
+    """Power vs. total computation time as the number of bins s varies.
+
+    For a fixed sample size ``n_fixed``, plots the power of the aggregated cheap
+    test against its total computation time for each bin count s in
+    args.cheap_perm_list, connected into a single curve whose markers are
+    labeled by s. The aggregated complete test is appended as the final point of
+    that curve (corresponding to s=n) and highlighted as a ``Standard`` marker.
+    """
+    std_multiple = scipy.stats.norm.ppf((1+args.wilson_size)/2)
+
+    plt.clf()
+    #Plot settings
+    fix_plot_settings = True
+    if fix_plot_settings:
+        plt.rc('font', family='serif')
+        plt.rc('text', usetex=False)
+        label_size = 9
+        legend_size = 8
+        mpl.rcParams['xtick.labelsize'] = label_size
+        mpl.rcParams['ytick.labelsize'] = label_size
+        mpl.rcParams['axes.labelsize'] = label_size
+        mpl.rcParams['axes.titlesize'] = label_size
+        mpl.rcParams['figure.titlesize'] = label_size
+        mpl.rcParams['lines.markersize'] = label_size
+        mpl.rcParams['grid.linewidth'] = 1.5
+        mpl.rcParams['legend.fontsize'] = legend_size
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
+        pylab.rcParams['xtick.major.pad'] = 5
+        pylab.rcParams['ytick.major.pad'] = 5
+
+    #Title settings
+    if not args.no_title:
+        if args.name == 'Higgs':
+            plt.title(r'Higgs ($p_{p}=$'+f'${args.p_poisoning}$'+f', $n={2*n_fixed}$, '+f'$B={args.B}$)')
+        else:
+            plt.title(f'{args.name} (aggregated, $n={2*n_fixed}$, '+f'$B={args.B}$)')
+
+    #Aggregated cheap test: one marker per bin count s
+    cheap_key = str(n_fixed)+'_cheap_perm'
+    rr, rru, rrl, ts, lb = joint_group_results_dict[cheap_key].get_lists(
+        wilson_intervals=args.wilson_intervals, z=std_multiple, median_rate=False)
+
+    #Aggregated complete test (s=n): a single point appended at the end of the curve
+    complete_key = str(n_fixed)+'_complete'
+    rr_c, rru_c, rrl_c, ts_c, lb_c = joint_group_results_dict[complete_key].get_lists(
+        wilson_intervals=args.wilson_intervals, z=std_multiple, median_rate=False)
+
+    #Combine the cheap points and the complete (Standard) point into one curve
+    combined_rr = np.array(list(rr) + list(rr_c))
+    combined_rru = np.array(list(rru) + list(rru_c))
+    combined_rrl = np.array(list(rrl) + list(rrl_c))
+    combined_ts = np.array(list(ts) + list(ts_c))
+    combined_labels = ['$s=$'+str(s) for s in args.cheap_perm_list] + ['Standard']
+
+    plot_line(combined_rr, combined_rru, combined_rrl, combined_ts, combined_labels,
+              legend_text='Aggregated cheap', marker='o', markersize=5, color='#0000cd',
+              linestyle='-', xytext=(0, 7), log_time_scale=True, small_times=args.small_times)
+
+    #Plot nominal level
+    if not args.no_nominal_level:
+        plt.axhline(y=args.alpha, color='black', linestyle=':', linewidth=1, label=r'Level $\alpha$')
+
+    #Axis settings
+    plt.xscale('log')
+    plt.tick_params(axis='x', which='minor', labelbottom=False)
+    tick_positions = [0.1, 1, 10, 100, 1000]
+    plt.xticks(tick_positions, tick_positions)
+    plt.xlabel('Total computation time (s)')
+    plt.ylabel('Power')
+    plt.xlim([0.5*np.min(combined_ts), 2.0*np.max(combined_ts)])
+    plt.ylim([-0.02, 1.02])
+
+    plt.legend(handletextpad=0.0, loc='upper left')
 
 def fig_n_independence(args, test_groups, joint_group_results_dict, plot_time=True):
     rejection_rate = dict()
@@ -986,7 +1081,7 @@ def fig_n_independence(args, test_groups, joint_group_results_dict, plot_time=Tr
         if args.name == 'gaussians_cov': 
             plt.title(f'Gaussian (cross covariance$=${args.cross_covariance}, $B={args.B}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $B={args.B}$)')
         elif args.name == 'Higgs': 
@@ -1228,7 +1323,7 @@ def fig_Wilcoxon_two_sample(args, test_groups, joint_group_results_dict):
         if args.name == 'gaussians': 
             plt.title(f'Gaussian (mean separation$=${args.mean_diff}, $n_1,n_2={args.n}$, $B={args.B}$, $d={args.d}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $n={args.n}$, $B={args.B}$)')
         elif args.name == 'Higgs': 
@@ -1367,7 +1462,7 @@ def fig_n_Wilcoxon(args, test_groups, joint_group_results_dict, plot_time=True):
         if args.name == 'gaussians':
             plt.title(f'Gaussian (mean separation$=${args.mean_diff}, $B={args.B}$)')
         elif args.name == 'blobs':
-            plt.title(f'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
+            plt.title(fr'Blobs ($\epsilon=${args.epsilon}, $B={args.B}$)')
         elif args.name == 'EMNIST':
             plt.title(f'Downsampled EMNIST ('+r'$p_{even}=$'+f'{args.p_even}, $B={args.B}$)')
         elif args.name == 'Higgs':
@@ -1606,7 +1701,7 @@ if __name__ == '__main__':
     parser.add_argument('--mixing', action='store_true', help='if passed use test mixing between classes')
     parser.add_argument('--null', action='store_true', help='if passed use null hypothesis, else use alternative')
     parser.add_argument('--n_components', type=int, default=4, help='number of dimensions to use')
-    parser.add_argument('--p_poisoning', type=float, default=0.9, help='poisoning probability of class 1 with class 0')
+    parser.add_argument('--p_poisoning', type=float, default=0.5, help='poisoning probability of class 1 with class 0')
     
     #Argument for gaussians_cov
     parser.add_argument('--cross_covariance', type=float, default=0.1, help='cross covariance')
@@ -1756,13 +1851,6 @@ if __name__ == '__main__':
         #Restrict the plotted sample sizes to those with available results
         args.n_samples_list = available_n_samples
 
-        if not os.path.exists('figures_cheap_n_aggregated'+'_'+args.name):
-            os.makedirs('figures_cheap_n_aggregated'+'_'+args.name)
-
-        plt.figure(figsize=(4.0,4.0))
-
-        fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False)
-
         if args.name == 'Higgs':
             if args.mixing:
                 fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+str(args.mixing)+'_'+str(args.p_poisoning)+'_'+formatted_used_test_groups+'.pdf'
@@ -1771,13 +1859,43 @@ if __name__ == '__main__':
         else:
             fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+formatted_used_test_groups+'.pdf'
 
-        #Here new
-        pplot()
-        plt.tight_layout()
-        #End of new
+        #Save a power-vs-sample-size plot and a power-vs-computation-time plot
+        for plot_time, subdir in [(False, 'figures_cheap_n_aggregated'), (True, 'figures_cheap_time_aggregated')]:
+            figdir = subdir+'_'+args.name
+            if not os.path.exists(figdir):
+                os.makedirs(figdir)
 
-        print('Figure file:'+'figures_cheap_n_aggregated'+'_'+args.name+'/'+fig_file)
-        plt.savefig(f'figures_cheap_n_aggregated'+'_'+args.name+'/'+fig_file, bbox_inches='tight', pad_inches=0)
+            plt.figure(figsize=(4.0,4.0))
+
+            fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=plot_time)
+
+            #Here new
+            pplot()
+            plt.tight_layout()
+            #End of new
+
+            print('Figure file:'+figdir+'/'+fig_file)
+            plt.savefig(figdir+'/'+fig_file, bbox_inches='tight', pad_inches=0)
+
+        #Third figure: power vs. computation time as s varies, at a fixed n
+        if not no_compute['cheap_perm'] and len(available_n_samples) > 0:
+            n_fixed = 16384 if 16384 in available_n_samples else max(available_n_samples)
+            figdir = 'figures_cheap_s_time_aggregated'+'_'+args.name
+            if not os.path.exists(figdir):
+                os.makedirs(figdir)
+
+            plt.figure(figsize=(4.0,4.0))
+
+            fig_s_two_sample_aggregated(args, test_groups, joint_group_results_dict, n_fixed)
+
+            #Here new
+            pplot()
+            plt.tight_layout()
+            #End of new
+
+            s_fig_file = fig_file.replace('.pdf', '_n'+str(n_fixed)+'.pdf')
+            print('Figure file:'+figdir+'/'+s_fig_file)
+            plt.savefig(figdir+'/'+s_fig_file, bbox_inches='tight', pad_inches=0)
 
     elif args.plot_n_permutations:
         joint_group_results_dict = dict()
