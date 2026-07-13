@@ -2,14 +2,14 @@
 #
 # This script runs the postprocessing_cheap.py Python script with different values
 # of 'n' to prepare the aggregated Higgs two-sample test results (aggregated complete
-# and aggregated cheap tests) used by fig_n_two_sample_aggregated in figures_cheap.py.
+# and aggregated cheap tests) used by figures_cheap.py.
 #
 # Example usage: bash postprocessing_cheap_n_aggregated_higgs.sh
 
 # List of n values to iterate over (same range as postprocessing_cheap_n_gaussians.sh)
 n_values=(1024 2048 4096 8192 16384)
 
-for p_poisoning in 0.5 0.0
+for p_poisoning in 0.0
 do
     # Loop through each n value
     for n in "${n_values[@]}"
@@ -28,8 +28,7 @@ do
             --B_2 200 \
             --B_3 20 \
             --n_bandwidths 5 \
-            --n_tests 1 \
-            --total_n_tests 400
+            --total_n_tests 2500
 
         # Optional: Check if the Python command was successful
         if [ $? -ne 0 ]; then

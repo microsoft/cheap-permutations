@@ -8,6 +8,25 @@ import util_classes_cheap
 import util_tests_cheap
 
 
+def _seed_test_index_sort_key(fname, alpha):
+    """
+    Sort files by (seed, test_index) using the filename convention:
+      ..._<seed>_<test_index>_<alpha>_...
+    This lets postprocessing consume task_id 1 (seed_0) first, then task_id 2, etc.
+    """
+    parts = os.path.basename(fname).split('_')
+    alpha_token = str(alpha)
+    try:
+        # Use the first alpha token after the fixed header fields.
+        alpha_idx = next(i for i, token in enumerate(parts) if token == alpha_token and i >= 2)
+        seed = int(parts[alpha_idx - 2])
+        test_index = int(parts[alpha_idx - 1])
+        return (seed, test_index, fname)
+    except (StopIteration, ValueError):
+        # Keep unparseable names at the end, but in deterministic order.
+        return (10**18, 10**18, fname)
+
+
 def get_results(args, aggregated=False):
     resdir = util_classes_cheap.get_group_directories(args, test_groups, aggregated=aggregated)
             
@@ -29,6 +48,10 @@ def get_results(args, aggregated=False):
             name = os.path.join(resdir[group],groupname[group])
             print(f'File to retrieve for {group}: {name}')
             fnames[group] = glob.glob(name)
+            fnames[group] = sorted(
+                fnames[group],
+                key=lambda f: _seed_test_index_sort_key(f, args.alpha),
+            )
             assert len(fnames[group]) > 0, 'no files! ({})'.format(name)
             if len(fnames[group]) and not args.interactive:
                 file_exists[group] = True

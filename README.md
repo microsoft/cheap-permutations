@@ -15,8 +15,9 @@ This repository replicates the experiments of [Cheap Permutation Testing](https:
 
 ## Installation
 
-All homogeneity experiments were run with Python 3.8.6 on a Slurm cluster of Intel Xeon Platinum 8268 CPU. 
 All independence experiments were run with Python 3.13.0 on a single AMD EPYC 7V13 CPU.
+All Higgs experiments were run with Python 3.11.0 on a single AMD EPYC 7V13 CPU.
+All other homogeneity experiments were run with Python 3.8.6 on a Slurm cluster of Intel Xeon Platinum 8268 CPU. 
 
 Create and activate the conda environment `cheap-env` by running the commands
 ```
@@ -51,6 +52,10 @@ Cheap and standard Wilcoxon tests with varying $n$ and $s$:
 ```
 sbatch gaussians_wilcoxon_n_test.slurm
 ```
+Cheap and standard aggregated and median bandwidth MMD tests on the Higgs dataset with varying $n$ and $s$: 
+```
+bash higgs_n_test.sh
+```
 
 ## Running independence tests:
 
@@ -71,38 +76,42 @@ sbatch gaussians_cov_B_test.slurm
 
 Cheap MMD tests with $n=16384$ samples and varying number of bins $s$, cheap RFF tests with $n=16384$ and varying $s$, rank $r$:
 ```
-./postprocessing_cheap_s_gaussians.sh 
+bash postprocessing_cheap_s_gaussians.sh 
 ```
 Cheap and standard MMD tests and CrossMMD tests, with varying $n$ and $s$:
 ```
-./postprocessing_cheap_n_gaussians.sh
+bash postprocessing_cheap_n_gaussians.sh
 ```
 Standard MMD tests with $n=16384$ and varying number of permutations $B$:
 ```
-./postprocessing_cheap_B_gaussians.sh
+bash postprocessing_cheap_B_gaussians.sh
 ```
 Cheap Wilcoxon tests with $n=16384$ samples and varying $s$:
 ```
-./postprocessing_cheap_s_wilcoxon.sh
+bash postprocessing_cheap_s_wilcoxon.sh
 ```
 Cheap and standard Wilcoxon tests with varying $n$ and $s$:
 ```
-./postprocessing_cheap_n_wilcoxon.sh
+bash postprocessing_cheap_n_wilcoxon.sh
+```
+Cheap and standard aggregated and median bandwidth MMD tests on the Higgs dataset with varying $n$ and $s$: 
+```
+bash postprocessing_cheap_n_higgs.sh
 ```
 
 ## Post-processing independence tests:
 
 Cheap HSIC tests with $n=2048$ samples and varying number of bins $s$:
 ```
-./postprocessing_cheap_s_gaussians_cov.sh
+bash postprocessing_cheap_s_gaussians_cov.sh
 ```
 Cheap and standard HSIC tests and CrossHSIC tests, with varying $n$ and $s$:
 ```
-./postprocessing_cheap_n_gaussians_cov.sh
+bash postprocessing_cheap_n_gaussians_cov.sh
 ```
 Standard HSIC tests with $n=2048$ and varying number of permutations $B$:
 ```
-./postprocessing_cheap_B_gaussians_cov.sh
+bash postprocessing_cheap_B_gaussians_cov.sh
 ```
 
 ## Figures homogeneity tests:
@@ -138,6 +147,10 @@ python figures_cheap.py --name gaussians --n 8192 --mean_diff 0.03 --B 1279 --n_
 Cheap and standard Wilcoxon tests with varying $n$ and $s$, power vs. time:
 ```
 python figures_cheap.py --name gaussians --n 8192 --mean_diff 0.03 --B 1279 --n_tests 10 --total_n_tests 10000 --d 1 --log_time_scale --wilson_intervals --no_complete --no_cheap_perm --no_cross_mmd --no_rff --no_cheap_rff --plot_wilcoxon --plot_n_samples --no_nominal_level --no_title --n_lists
+```
+Cheap and standard aggregated and median bandwidth MMD tests on the Higgs dataset with varying $n$ and $s$: 
+```
+python figures_cheap.py --name Higgs --plot_n_samples_aggregated --n_components 2 --p_poisoning 0.0 --total_n_tests 2500 --B 299 --B_2 200 --B_3 20 --n_bandwidths 5 --wilson_intervals --mixing --no_title
 ```
 
 ## Figures independence tests:

@@ -782,7 +782,7 @@ def fig_n_two_sample(args, test_groups, joint_group_results_dict, plot_time=True
 
     plt.legend(handletextpad=0.0, loc='upper left')
 
-def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False):
+def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=False, which='both', clear_fig=True):
     """Power figure for aggregated two-sample tests.
 
     Plots the power of:
@@ -794,6 +794,15 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
 
     Aggregated tests are drawn with solid lines; the corresponding median
     heuristics use dashed lines of the same color.
+
+    Parameters
+    ----------
+    which : str
+        Which curves to draw: ``'both'`` (default), ``'aggregated'`` (solid
+        lines only), or ``'median'`` (dashed lines only).
+    clear_fig : bool
+        If ``True`` (default) call ``plt.clf()`` at the start.  Set to
+        ``False`` when drawing into a pre-existing subplot.
     """
     std_multiple = scipy.stats.norm.ppf((1+args.wilson_size)/2)
 
@@ -802,20 +811,33 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
     x_samples = 2*array_n_samples
 
     #Linestyles, markers, marker sizes and colors
-    ls_agg = '-'
-    ls_median = '--'
-    mss = ['>', 's', 'o', 'D', '^', '*', 'x', '<', 'v', 'p']*2
-    ms_size = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]*2
-    colors = ['#e41a1c', 'cyan', '#0000cd', '#4daf4a', 'magenta', 'gray', 'orange', 'yellow', 'black']*2
+    cheap_perm_styles = {
+        8:   {'color': '#ff69b4', 'marker': '+', 'markersize': 7, 'linestyle': '--'},
+        32:  {'color': '#4daf4a', 'marker': 'D', 'markersize': 5, 'linestyle': '--'},
+        128: {'color': '#0000cd', 'marker': 'o', 'markersize': 5, 'linestyle': ':'},
+    }
 
     # Build the list of curves: aggregated complete plus one aggregated cheap
     # curve per bin count s
     curves = []
     if not no_compute['complete']:
-        curves.append({'group': 'complete', 'id': 0, 'legend': 'Agg. complete'})
+        curves.append({'group': 'complete', 'id': 0,
+                       'color': '#e41a1c', 'marker': '>', 'markersize': 5, 'linestyle': '-',
+                       'legend_agg': 'Standard MMDAgg', 'legend_median': r'Standard MMD (median bandwidth $\lambda_0$)'})
     if not no_compute['cheap_perm']:
-        for j, s in enumerate(args.cheap_perm_list):
-            curves.append({'group': 'cheap_perm', 'id': j, 'legend': f'Agg. cheap $s={s}$'})
+        cheap_pairs = sorted(
+            list(enumerate(args.cheap_perm_list)),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        for j, s in cheap_pairs:
+            if s not in cheap_perm_styles:
+                continue
+            st = cheap_perm_styles[s]
+            curves.append({'group': 'cheap_perm', 'id': j,
+                           'color': st['color'], 'marker': st['marker'],
+                           'markersize': st['markersize'], 'linestyle': st['linestyle'],
+                           'legend_agg': f'Cheap $s={s}$', 'legend_median': f'Cheap $s={s}$'})
 
     def collect(group, id_value, median_rate):
         rr_list = []
@@ -832,7 +854,25 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
             ts_list.append(ts[id_value])
         return np.array(rr_list), np.array(rru_list), np.array(rrl_list), np.array(ts_list)
 
-    plt.clf()
+    def complete_label_offset(which_plot, n_display):
+        # Base offset used in the Gaussian two-sample plot style.
+        dx, dy = -17, 0
+        if which_plot == 'aggregated':
+            # Move n=16384 down to avoid overlap with the n=32768 label.
+            if n_display == 16384:
+                return (-19, -8)
+            return (dx, dy)
+        if which_plot == 'median':
+            # Move 4096 and higher n labels to the right; keep 4096/8192 slightly up.
+            if n_display in (4096, 8192):
+                return (-10, 6)
+            if n_display in (16384, 32768):
+                return (-18, 0)
+            return (dx, dy)
+        return (dx, dy)
+
+    if clear_fig:
+        plt.clf()
     #Plot settings
     fix_plot_settings = True
     if fix_plot_settings:
@@ -858,43 +898,67 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
 
     #Title settings
     if not args.no_title:
-        if args.name == 'Higgs':
-            plt.title(r'Higgs ($p_{p}=$'+f'${args.p_poisoning}$'+f', $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
+        if which == 'aggregated':
+            plt.title('MMDAgg')
+        elif which == 'median':
+            plt.title('MMD (median heuristic)')
         else:
-            plt.title(f'{args.name} (aggregated, $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
+            if args.name == 'Higgs':
+                plt.title(r'Higgs ($p_{p}=$'+f'${args.p_poisoning}$'+f', $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
+            else:
+                plt.title(f'{args.name} (aggregated, $B={args.B}$, '+f'$n_{{bw}}={args.n_bandwidths}$)')
 
     empty_labels = [''] * len(args.n_samples_list)
+    complete_labels = ['$n=$'+str(2*int(n_samples)) for n_samples in args.n_samples_list]
 
     all_times = []
 
     #Plot one aggregated curve (solid) and its median heuristic (dashed) per test
-    for line_number, curve in enumerate(curves):
+    for curve in curves:
         group = curve['group']
         id_value = curve['id']
-        color = colors[line_number]
-        marker = mss[line_number]
-        markersize = ms_size[line_number]
+        color = curve['color']
+        marker = curve['marker']
+        markersize = curve['markersize']
 
-        # Aggregated test (solid line)
-        rr, rru, rrl, ts = collect(group, id_value, median_rate=False)
-        x_values = ts if plot_time else x_samples
-        all_times.append(ts)
-        plot_line(rr, rru, rrl, x_values, empty_labels, legend_text=curve['legend'],
-                  marker=marker, markersize=markersize, color=color, linestyle=ls_agg,
-                  xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
+        # Aggregated test
+        if which in ('both', 'aggregated'):
+            rr, rru, rrl, ts = collect(group, id_value, median_rate=False)
+            x_values = ts if plot_time else x_samples
+            all_times.append(ts)
+            show_complete_labels = (plot_time and group == 'complete')
+            point_labels = empty_labels if show_complete_labels else empty_labels
+            plot_line(rr, rru, rrl, x_values, point_labels, legend_text=curve['legend_agg'],
+                      marker=marker, markersize=markersize, color=color, linestyle=curve['linestyle'],
+                      xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
+            if show_complete_labels:
+                for x, y, n_disp in zip(x_values, rr, x_samples):
+                    dx, dy = complete_label_offset('aggregated', int(n_disp))
+                    plt.annotate(f'$n={int(n_disp)}$', (x, y), textcoords='offset points',
+                                 xytext=(dx, dy), ha='center', size=6)
 
-        # Median heuristic single-bandwidth test (dashed line, same color).
+        # Median heuristic single-bandwidth test (same linestyle as aggregated).
         # It reuses the aggregated computation, hence the same computation time.
-        rr_m, rru_m, rrl_m, ts_m = collect(group, id_value, median_rate=True)
-        x_values_m = ts_m if plot_time else x_samples
-        plot_line(rr_m, rru_m, rrl_m, x_values_m, empty_labels,
-                  legend_text=curve['legend'].replace('Agg.', 'Median'),
-                  marker=marker, markersize=markersize, color=color, linestyle=ls_median,
-                  xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
+        if which in ('both', 'median'):
+            rr_m, rru_m, rrl_m, ts_m = collect(group, id_value, median_rate=True)
+            x_values_m = ts_m if plot_time else x_samples
+            if which == 'median':
+                all_times.append(ts_m)
+            show_complete_labels_m = (plot_time and group == 'complete')
+            point_labels_m = empty_labels if show_complete_labels_m else empty_labels
+            plot_line(rr_m, rru_m, rrl_m, x_values_m, point_labels_m,
+                      legend_text=curve['legend_median'],
+                      marker=marker, markersize=markersize, color=color, linestyle=curve['linestyle'],
+                      xytext=(0, 0), log_time_scale=plot_time, small_times=args.small_times)
+            if show_complete_labels_m:
+                for x, y, n_disp in zip(x_values_m, rr_m, x_samples):
+                    dx, dy = complete_label_offset('median', int(n_disp))
+                    plt.annotate(f'$n={int(n_disp)}$', (x, y), textcoords='offset points',
+                                 xytext=(dx, dy), ha='center', size=6)
 
     #Plot nominal level
     if not args.no_nominal_level:
-        plt.axhline(y=args.alpha, color='black', linestyle=':', linewidth=1, label=r'Level $\alpha$')
+        plt.axhline(y=args.alpha, color='black', linestyle=':', linewidth=1)
 
     #Axis settings
     plt.xscale('log')
@@ -904,7 +968,8 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
         plt.xticks(tick_positions, tick_positions)
         plt.xlabel('Total computation time (s)')
         all_times = np.concatenate(all_times)
-        plt.xlim([0.5*np.min(all_times), 2.0*np.max(all_times)])
+        left_factor = 0.1 if which == 'aggregated' else 0.5
+        plt.xlim([left_factor*np.min(all_times), 2.0*np.max(all_times)])
     else:
         tick_positions = [2048, 4096, 8192, 16384, 32768]
         plt.xticks(tick_positions, tick_positions)
@@ -912,84 +977,9 @@ def fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plo
         plt.xlim([1.8*np.min(array_n_samples), 2.2*np.max(array_n_samples)])
     plt.ylabel('Power')
     plt.ylim([-0.02, 1.02])
+    plt.tick_params(axis='both', labelsize=label_size)
 
-    plt.legend(handletextpad=0.0, loc='upper left', ncol=2)
-
-def fig_s_two_sample_aggregated(args, test_groups, joint_group_results_dict, n_fixed):
-    """Power vs. total computation time as the number of bins s varies.
-
-    For a fixed sample size ``n_fixed``, plots the power of the aggregated cheap
-    test against its total computation time for each bin count s in
-    args.cheap_perm_list, connected into a single curve whose markers are
-    labeled by s. The aggregated complete test is appended as the final point of
-    that curve (corresponding to s=n) and highlighted as a ``Standard`` marker.
-    """
-    std_multiple = scipy.stats.norm.ppf((1+args.wilson_size)/2)
-
-    plt.clf()
-    #Plot settings
-    fix_plot_settings = True
-    if fix_plot_settings:
-        plt.rc('font', family='serif')
-        plt.rc('text', usetex=False)
-        label_size = 9
-        legend_size = 8
-        mpl.rcParams['xtick.labelsize'] = label_size
-        mpl.rcParams['ytick.labelsize'] = label_size
-        mpl.rcParams['axes.labelsize'] = label_size
-        mpl.rcParams['axes.titlesize'] = label_size
-        mpl.rcParams['figure.titlesize'] = label_size
-        mpl.rcParams['lines.markersize'] = label_size
-        mpl.rcParams['grid.linewidth'] = 1.5
-        mpl.rcParams['legend.fontsize'] = legend_size
-        matplotlib.rcParams['pdf.fonttype'] = 42
-        matplotlib.rcParams['ps.fonttype'] = 42
-        pylab.rcParams['xtick.major.pad'] = 5
-        pylab.rcParams['ytick.major.pad'] = 5
-
-    #Title settings
-    if not args.no_title:
-        if args.name == 'Higgs':
-            plt.title(r'Higgs ($p_{p}=$'+f'${args.p_poisoning}$'+f', $n={2*n_fixed}$, '+f'$B={args.B}$)')
-        else:
-            plt.title(f'{args.name} (aggregated, $n={2*n_fixed}$, '+f'$B={args.B}$)')
-
-    #Aggregated cheap test: one marker per bin count s
-    cheap_key = str(n_fixed)+'_cheap_perm'
-    rr, rru, rrl, ts, lb = joint_group_results_dict[cheap_key].get_lists(
-        wilson_intervals=args.wilson_intervals, z=std_multiple, median_rate=False)
-
-    #Aggregated complete test (s=n): a single point appended at the end of the curve
-    complete_key = str(n_fixed)+'_complete'
-    rr_c, rru_c, rrl_c, ts_c, lb_c = joint_group_results_dict[complete_key].get_lists(
-        wilson_intervals=args.wilson_intervals, z=std_multiple, median_rate=False)
-
-    #Combine the cheap points and the complete (Standard) point into one curve
-    combined_rr = np.array(list(rr) + list(rr_c))
-    combined_rru = np.array(list(rru) + list(rru_c))
-    combined_rrl = np.array(list(rrl) + list(rrl_c))
-    combined_ts = np.array(list(ts) + list(ts_c))
-    combined_labels = ['$s=$'+str(s) for s in args.cheap_perm_list] + ['Standard']
-
-    plot_line(combined_rr, combined_rru, combined_rrl, combined_ts, combined_labels,
-              legend_text='Aggregated cheap', marker='o', markersize=5, color='#0000cd',
-              linestyle='-', xytext=(0, 7), log_time_scale=True, small_times=args.small_times)
-
-    #Plot nominal level
-    if not args.no_nominal_level:
-        plt.axhline(y=args.alpha, color='black', linestyle=':', linewidth=1, label=r'Level $\alpha$')
-
-    #Axis settings
-    plt.xscale('log')
-    plt.tick_params(axis='x', which='minor', labelbottom=False)
-    tick_positions = [0.1, 1, 10, 100, 1000]
-    plt.xticks(tick_positions, tick_positions)
-    plt.xlabel('Total computation time (s)')
-    plt.ylabel('Power')
-    plt.xlim([0.5*np.min(combined_ts), 2.0*np.max(combined_ts)])
-    plt.ylim([-0.02, 1.02])
-
-    plt.legend(handletextpad=0.0, loc='upper left')
+    plt.legend(handletextpad=0.0, loc='upper left', ncol=1)
 
 def fig_n_independence(args, test_groups, joint_group_results_dict, plot_time=True):
     rejection_rate = dict()
@@ -1859,43 +1849,24 @@ if __name__ == '__main__':
         else:
             fig_file = 'rejection_probability_'+args.name+'_'+str(args.d)+'_'+str(args.B)+'_'+str(args.B_2)+'_'+str(args.n_bandwidths)+'_'+str(args.alpha)+'_'+str(args.total_n_tests)+'_'+formatted_used_test_groups+'.pdf'
 
-        #Save a power-vs-sample-size plot and a power-vs-computation-time plot
-        for plot_time, subdir in [(False, 'figures_cheap_n_aggregated'), (True, 'figures_cheap_time_aggregated')]:
-            figdir = subdir+'_'+args.name
-            if not os.path.exists(figdir):
-                os.makedirs(figdir)
+        # Save only the power-vs-computation-time aggregated figure.
+        figdir = 'figures_cheap_time_aggregated'+'_'+args.name
+        if not os.path.exists(figdir):
+            os.makedirs(figdir)
 
-            plt.figure(figsize=(4.0,4.0))
+        # Split into two subfigures: aggregated tests (left) and median tests (right)
+        plt.figure(figsize=(8.0, 4.0))
+        plt.subplot(1, 2, 1)
+        fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=True, which='aggregated', clear_fig=False)
+        pplot()
+        plt.subplot(1, 2, 2)
+        fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=True, which='median', clear_fig=False)
+        pplot()
 
-            fig_n_two_sample_aggregated(args, test_groups, joint_group_results_dict, plot_time=plot_time)
+        plt.tight_layout()
 
-            #Here new
-            pplot()
-            plt.tight_layout()
-            #End of new
-
-            print('Figure file:'+figdir+'/'+fig_file)
-            plt.savefig(figdir+'/'+fig_file, bbox_inches='tight', pad_inches=0)
-
-        #Third figure: power vs. computation time as s varies, at a fixed n
-        if not no_compute['cheap_perm'] and len(available_n_samples) > 0:
-            n_fixed = 16384 if 16384 in available_n_samples else max(available_n_samples)
-            figdir = 'figures_cheap_s_time_aggregated'+'_'+args.name
-            if not os.path.exists(figdir):
-                os.makedirs(figdir)
-
-            plt.figure(figsize=(4.0,4.0))
-
-            fig_s_two_sample_aggregated(args, test_groups, joint_group_results_dict, n_fixed)
-
-            #Here new
-            pplot()
-            plt.tight_layout()
-            #End of new
-
-            s_fig_file = fig_file.replace('.pdf', '_n'+str(n_fixed)+'.pdf')
-            print('Figure file:'+figdir+'/'+s_fig_file)
-            plt.savefig(figdir+'/'+s_fig_file, bbox_inches='tight', pad_inches=0)
+        print('Figure file:'+figdir+'/'+fig_file)
+        plt.savefig(figdir+'/'+fig_file, bbox_inches='tight', pad_inches=0)
 
     elif args.plot_n_permutations:
         joint_group_results_dict = dict()
